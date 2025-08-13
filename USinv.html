@@ -1,0 +1,149 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Processing Request...</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            margin: 0;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+        .container {
+            text-align: center;
+            padding: 2rem;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 20px;
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            max-width: 400px;
+        }
+        .spinner {
+            width: 40px;
+            height: 40px;
+            border: 4px solid rgba(255, 255, 255, 0.3);
+            border-top: 4px solid white;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 1rem auto;
+        }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        .success {
+            color: #4CAF50;
+            font-size: 1.2rem;
+            font-weight: bold;
+        }
+        .error {
+            color: #f44336;
+            font-size: 1rem;
+        }
+        .hidden {
+            display: none;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div id="loading">
+            <div class="spinner"></div>
+            <h2>Processing your request...</h2>
+            <p>Please wait while we trigger your webhook.</p>
+        </div>
+        
+        <div id="success" class="hidden">
+            <h2 class="success">✓ Success!</h2>
+            <p>Your webhook has been triggered successfully.</p>
+            <p><small>This window will close in <span id="countdown">3</span> seconds...</small></p>
+        </div>
+        
+        <div id="error" class="hidden">
+            <h2 class="error">✗ Error</h2>
+            <p>There was an issue triggering your webhook.</p>
+            <p><small id="error-message"></small></p>
+        </div>
+    </div>
+
+    <script>
+        // Configuration - REPLACE WITH YOUR ACTUAL VALUES
+        const WEBHOOK_URL = 'https://hook.us1.make.com/mtq4dd33f7fp1zofph6bdqee3oskpyd4';
+        const SECRET_KEY = '%mEAaMADE8@wtyUkH3#&FOg&'; // Change this to your own secret
+        
+        // Get URL parameters to pass through
+        const urlParams = new URLSearchParams(window.location.search);
+        const pageData = Object.fromEntries(urlParams.entries());
+        
+        // Add timestamp, unique ID, and secret authentication
+        const webhookData = {
+            secret: SECRET_KEY,
+            ...pageData,
+            timestamp: new Date().toISOString(),
+            trigger_id: generateUniqueId(),
+            source: 'notion_button',
+            user_agent: navigator.userAgent
+        };
+
+        function generateUniqueId() {
+            return Date.now().toString(36) + Math.random().toString(36).substr(2);
+        }
+
+        async function triggerWebhook() {
+            try {
+                const response = await fetch(WEBHOOK_URL, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify(webhookData)
+                });
+
+                if (response.ok) {
+                    showSuccess();
+                    startCountdown();
+                } else {
+                    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                }
+            } catch (error) {
+                showError(error.message);
+            }
+        }
+
+        function showSuccess() {
+            document.getElementById('loading').classList.add('hidden');
+            document.getElementById('success').classList.remove('hidden');
+        }
+
+        function showError(message) {
+            document.getElementById('loading').classList.add('hidden');
+            document.getElementById('error').classList.remove('hidden');
+            document.getElementById('error-message').textContent = message;
+        }
+
+        function startCountdown() {
+            let seconds = 3;
+            const countdownElement = document.getElementById('countdown');
+            
+            const interval = setInterval(() => {
+                seconds--;
+                countdownElement.textContent = seconds;
+                
+                if (seconds <= 0) {
+                    clearInterval(interval);
+                    window.close();
+                }
+            }, 1000);
+        }
+
+        // Trigger the webhook when page loads
+        triggerWebhook();
+    </script>
+</body>
+</html>
